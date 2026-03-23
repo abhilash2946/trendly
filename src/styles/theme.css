@@ -1,0 +1,39 @@
+:root {
+  --color-primary: #bc16fe;
+  --color-secondary: #00f2ff;
+  --color-accent-rose: #ff2d55;
+  --color-bg-dark: #050208;
+  --color-surface-dark: #120818;
+}
+
+body {
+  background-color: var(--color-bg-dark);
+  color: #E2E8F0;
+  font-family: 'Space Grotesk', sans-serif;
+  background-image:
+    radial-gradient(circle at 0% 0%, rgba(188, 22, 254, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(0, 242, 255, 0.1) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-card {
+  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px;
+}
+
+.text-gradient {
+  background-image: linear-gradient(to right, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

@@ -1,0 +1,28 @@
+.perspective {
+  perspective: 1200px;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease;
+}
+
+.card-3d:hover {
+  transform: rotateX(8deg) rotateY(8deg) translateY(-6px);
+}
+
+.neon-glow-primary {
+  box-shadow: 0 0 20px rgba(188, 22, 254, 0.4);
+}
+
+.neon-glow-secondary {
+  box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+}
+
+.neon-glow-rose {
+  box-shadow: 0 0 20px rgba(255, 45, 85, 0.4);
+}

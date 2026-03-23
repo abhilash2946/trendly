@@ -1,0 +1,13 @@
+ultralytics
+torch
+torchvision
+flask
+flask-cors
+pillow
+numpy
+scikit-learn
+# rembg uses U-2-Net for background removal — REQUIRED for correct color detection
+# Without this, a navy shoe on a brown table will be misidentified as "brown"
+rembg
+# Optional — CLIP adds better category classification fallback
+# git+https://github.com/openai/CLIP.git

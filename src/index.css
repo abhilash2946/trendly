@@ -1,0 +1,52 @@
+@import "tailwindcss";
+@import "./styles/theme.css";
+@import "./styles/animations.css";
+@import "./styles/3d-effects.css";
+
+@theme {
+  --color-primary: #bc16fe;
+  --color-secondary: #00f2ff;
+  --color-accent-rose: #ff2d55;
+  --color-bg-dark: #050208;
+  --color-surface-dark: #120818;
+
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-dark text-slate-100 font-display selection:bg-primary selection:text-white;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/10;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}

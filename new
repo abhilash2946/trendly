@@ -1,0 +1,174 @@
+import { supabase } from '../lib/supabaseClient';
+import { askTrendlyAIWithHistory, type TrendlyAIServerReply } from '../lib/localAI';
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AIStylistStructuredResponse {
+  message: string;
+  suggestion: string;
+  items: string[];
+  summary: string;
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+export async function getAIStylistResponse(
+  userInput: string,
+  conversationHistory: ConversationMessage[]
+): Promise<AIStylistStructuredResponse> {
+  try {
+    // We can also inject a system personality hint here if the server supports history
+    const response = await askTrendlyAIWithHistory(userInput, conversationHistory);
+    return sanitizeServerReply(response, userInput);
+  } catch (err: any) {
+    console.error('Local AI error:', err);
+    const fallback = fallbackReply(userInput);
+    return fallback;
+  }
+}
+
+export async function saveConversationMessage(userId: string, message: string, role: 'user' | 'assistant') {
+  const { error } = await supabase.from('ai_conversations').insert([{ user_id: userId, message, role }]);
+  if (error) {
+    throw error;
+  }
+}
+
+export async function loadConversationHistory(userId: string): Promise<ConversationMessage[]> {
+  const { data, error } = await supabase
+    .from('ai_conversations')
+    .select('message, role')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(30);
+  if (error) {
+    throw error;
+  }
+  if (!data) return [];
+  return data.map(row => ({ role: row.role as 'user' | 'assistant', content: row.message as string }));
+}
+
+function sanitizeServerReply(reply: TrendlyAIServerReply, prompt: string): AIStylistStructuredResponse {
+  const message = String(reply?.message || '').trim();
+  const suggestion = String(reply?.suggestion || '').trim();
+  const summary = String(reply?.summary || '').trim();
+  const items = Array.isArray(reply?.items) ? reply.items.map((item) => String(item).trim()).filter(Boolean) : [];
+
+  if (!message && !summary) {
+    return fallbackReply(prompt);
+  }
+
+  return {
+    message: message || summary,
+    suggestion,
+    items,
+    summary: summary || suggestion,
+  };
+}
+
+function fallbackReply(prompt: string): AIStylistStructuredResponse {
+  const normalized = prompt.toLowerCase();
+
+  // 1️⃣ GREETING
+  if (/^(hi|hello|hey|heyy|yo|namaste)\b/.test(normalized)) {
+    return {
+      message: "Hey bestie! 👋✨ I'm literally SO hyped to help you look absolute fire today! \n\nWhat's the vibe we're going for? Where are we headed? 👀 Give me the tea! ☕️",
+      suggestion: '',
+      items: [],
+      summary: "Greeting with Gen-Z energy.",
+    };
+  }
+
+  const eventType = detectEventType(normalized);
+
+  // 2️⃣ NO EVENT DETECTED
+  if (!eventType) {
+    return {
+      message: "Wait, I need the details! ☕️ What kind of event are we talking about? Wedding? Office? Hot date? \n\nTell me the vibe you're feeling today! 🔥 Is it classy, casual, or sporty? 👀",
+      suggestion: '',
+      items: [],
+      summary: 'Asking for event details.',
+    };
+  }
+
+  // 3️⃣ WEDDING
+  if (eventType === 'wedding') {
+    return {
+      message: "Okay bestie 👀 a wedding fit?? Let’s make you look classy but still stylish ✨\n\n👕 Top\nCream blazer with a fitted shirt\n\n👖 Bottom\nTailored black trousers\n\n👟 Shoes\nBrown leather loafers\n\n🧥 Accessories\nMinimal watch + pocket square\n\n✨ Why this works\nThe cream blazer gives that elegant wedding vibe while the black trousers keep it sharp.\n\n💡 Style tip\nAdd a subtle perfume and keep the blazer slightly fitted — you'll look 🔥 in photos.\n\nAre you attending as a **guest** or part of the **wedding party**? 👀",
+      suggestion: 'Classy cream blazer wedding look',
+      items: ['cream blazer', 'fitted shirt', 'black trousers', 'brown loafers'],
+      summary: 'Elegant wedding attire with a cream blazer.',
+    };
+  }
+
+  // 4️⃣ BIRTHDAY
+  if (eventType === 'birthday') {
+    return {
+      message: "Okay wait… birthday outfit?? This is your main character moment 🎂🔥\n\n👕 Top\nStylish graphic tee or fitted shirt\n\n👖 Bottom\nSlim blue jeans\n\n👟 Shoes\nWhite sneakers\n\n🧢 Accessories\nWatch + sunglasses\n\n✨ Why this works\nIt keeps the vibe fun and stylish without trying too hard.\n\n💡 Style tip\nLayer with a light jacket if the party is at night.\n\nSo tell me 👀 is the birthday party **casual or fancy**?",
+      suggestion: 'Birthday main character look',
+      items: ['graphic tee', 'slim blue jeans', 'white sneakers', 'sunglasses'],
+      summary: 'Fun and stylish birthday celebration outfit.',
+    };
+  }
+
+  // 5️⃣ PARTY
+  if (eventType === 'party') {
+    return {
+      message: "Ooo party vibes?? Say less 🔥\n\n👕 Top\nBlack fitted shirt\n\n👖 Bottom\nDark ripped jeans\n\n👟 Shoes\nChelsea boots or white sneakers\n\n✨ Why this works\nDark tones give that confident night-out vibe while ripped jeans keep it edgy.\n\n💡 Style tip\nRoll your sleeves slightly and add a chain — instant cool energy 😎\n\nIs this a **club party** or a **house party**?",
+      suggestion: 'Edgy night-out party look',
+      items: ['black fitted shirt', 'dark ripped jeans', 'chelsea boots'],
+      summary: 'Confident and edgy party outfit.',
+    };
+  }
+
+  // 6️⃣ OFFICE
+  if (eventType === 'office') {
+    return {
+      message: "Corporate baddie era? I'm here for it! 💼✨ Let's keep it sharp, professional, and totally stylish so you can crush those meetings. \n\nCheck this move:\n\n👕 Top\nCrisp light blue button-down shirt\n\n👖 Bottom\nCharcoal slim-fit trousers\n\n👟 Shoes\nBlack leather loafers or clean derby shoes\n\n✨ Why this works\nIt's clean, polished, and says 'I'm the boss' without even trying. This look is all about that quiet confidence. 💅\n\n💡 Style tip\nA minimalist silver watch and a clean belt are all you need to complete the look. \n\nWant to try this in the AR Mirror? 🔥",
+      suggestion: 'Sharp smart-formal office look',
+      items: ['light blue shirt', 'charcoal trousers', 'black loafers'],
+      summary: 'Professional and sharp office attire.',
+    };
+  }
+
+  // 7️⃣ DATE
+  if (eventType === 'date') {
+    return {
+      message: "Ooh, a night out! 🌙✨ You better get ready to turn some heads! We're going for that effortless 'main character' energy. \n\nLook at this fire combo:\n\n👕 Top\nBlack oversized leather jacket over a clean white tee\n\n👖 Bottom\nDark wash relaxed-fit jeans\n\n👟 Shoes\nChunky white sneakers\n\n✨ Why this works\nIt's the ultimate cool-girl/guy vibe. Edgy but super comfy for dancing all night! 🔥\n\n💡 Style tip\nAdd a thin silver chain for that extra spice. 🌶️ It's all in the details, bestie!\n\nWhat vibe are you feeling today? More street style or something classy? 👀",
+      suggestion: 'Main character night-out look',
+      items: ['black leather jacket', 'white tee', 'dark relaxed jeans', 'white sneakers'],
+      summary: 'Cool and edgy night-out look.',
+    };
+  }
+
+  // 8️⃣ FESTIVAL
+  if (eventType === 'festival') {
+    return {
+      message: "Festival season is here! 🎡✨ Let's get you that vibrant, head-turning festive look! \n\n👕 Top\nMustard yellow embroidered silk kurta\n\n👖 Bottom\nStraight white cotton trousers\n\n👟 Shoes\nTan leather sandals\n\n🧥 Accessories\nTextured stole + classic watch\n\n✨ Why this works\nThe mustard yellow is super festive and elegant. It's enough color to stand out but still looks refined and wearable for hours! 💅\n\n💡 Style tip\nStyle the stole over one shoulder for that premium ethnic vibe. \n\nAre you vibing with the yellow or should we try something else? 👀",
+      suggestion: 'Vibrant festive yellow kurta look',
+      items: ['mustard yellow silk kurta', 'white trousers', 'tan sandals', 'textured stole'],
+      summary: 'Vibrant and refined ethnic festival look.',
+    };
+  }
+
+  // 9️⃣ CASUAL / DEFAULT
+  return {
+    message: "Hey bestie 👋✨\n\nIf you're going for a **clean streetwear vibe**, I have the perfect combo for you 🔥\n\n👕 Top\nOversized black hoodie\n\n👖 Bottom\nLight wash ripped jeans\n\n👟 Shoes\nWhite chunky sneakers\n\n✨ Why this works\nThe oversized hoodie keeps things comfy while the ripped jeans add that edgy street vibe.\n\n💡 Style tip\nRoll the sleeves slightly and add a silver chain — instant main-character energy 😎\n\nWanna see how this looks on you in the **AR Mirror**? 👀",
+    suggestion: 'Minimalist streetwear outfit',
+    items: ['oversized black hoodie', 'light wash ripped jeans', 'white sneakers'],
+    summary: 'Modern urban street look.',
+  };
+}
+
+function detectEventType(text: string) {
+  if (/(wedding|weddng|marriage|marrage|mariage|reception|engagement|shaadi)/i.test(text)) return 'wedding';
+  if (/(office|work|meeting|corporate|conference|interview|formal)/i.test(text)) return 'office';
+  if (/(birthday|bday|birth day)/i.test(text)) return 'birthday';
+  if (/(party|club|celebration|rave)/i.test(text)) return 'party';
+  if (/(date|dinner|night out|nightout)/i.test(text)) return 'date';
+  if (/(festival|festive|ethnic|traditional|pooja|puja|diwali|eid|holi)/i.test(text)) return 'festival';
+  if (/(college|outing|casual|weekend|friends)/i.test(text)) return 'casual';
+  return null;
+}

@@ -1,0 +1,6 @@
+@echo off
+echo Installing dependencies...
+pip install ultralytics torch torchvision flask flask-cors pillow
+echo.
+echo Starting Trendly YOLO Detection Server on port 5001...
+python yolo_server.py
